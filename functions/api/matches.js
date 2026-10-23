@@ -1,11 +1,9 @@
 export async function onRequestGet(context) {
   const FOOTBALL_API_KEY = "26649c1bb8fa4c11ba8a5c6ea393df58";
-  
   let footballMatches = [];
 
-  // 1. Consultar partidos reales de Fútbol desde Football-Data.org
   try {
-    const res = await fetch("https://api.football-data.org/v4/matches", {
+    const res = await fetch("https://api.football-data.org/v4/competitions/PD/matches?status=SCHEDULED", {
       headers: { "X-Auth-Token": FOOTBALL_API_KEY }
     });
 
@@ -14,20 +12,20 @@ export async function onRequestGet(context) {
       footballMatches = (data.matches || []).slice(0, 5).map(m => ({
         id: `fb_${m.id}`,
         sport: "FOOTBALL",
-        league: m.competition ? m.competition.name : "Fútbol Top",
-        homeTeam: m.homeTeam.name,
+        league: m.competition ? m.competition.name : "LaLiga España",
+        homeTeam: m.homeTeam.shortName || m.homeTeam.name,
         homeLogo: m.homeTeam.crest || "https://crests.football-data.org/86.png",
-        awayTeam: m.awayTeam.name,
+        awayTeam: m.awayTeam.shortName || m.awayTeam.name,
         awayLogo: m.awayTeam.crest || "https://crests.football-data.org/81.png",
         date: m.utcDate,
-        totalPool: 100.00
+        totalPool: 150.00
       }));
     }
   } catch (e) {
-    console.log("Error consultando API de Fútbol, cargando respaldo.");
+    console.log("Error consultando API de Fútbol");
   }
 
-  // Si la API no devuelve partidos hoy o da error, cargamos respaldo
+  // Respaldo garantizado si la API no arroja partidos en el horario exacto
   if (footballMatches.length === 0) {
     footballMatches = [
       {
@@ -55,7 +53,6 @@ export async function onRequestGet(context) {
     ];
   }
 
-  // 2. Partidos de Béisbol MLB
   const baseballMatches = [
     {
       id: "bb_1",
@@ -67,21 +64,9 @@ export async function onRequestGet(context) {
       awayLogo: "https://www.mlbstatic.com/team-logos/111.svg",
       date: new Date(Date.now() + 240 * 60000).toISOString(),
       totalPool: 320.00
-    },
-    {
-      id: "bb_2",
-      sport: "BASEBALL",
-      league: "MLB Béisbol",
-      homeTeam: "LA Dodgers",
-      homeLogo: "https://www.mlbstatic.com/team-logos/119.svg",
-      awayTeam: "SF Giants",
-      awayLogo: "https://www.mlbstatic.com/team-logos/137.svg",
-      date: new Date(Date.now() + 300 * 60000).toISOString(),
-      totalPool: 195.00
     }
   ];
 
-  // Unir listas
   const allMatches = [...footballMatches, ...baseballMatches];
 
   return new Response(JSON.stringify(allMatches), {
