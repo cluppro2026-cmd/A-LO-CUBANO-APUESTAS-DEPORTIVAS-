@@ -24,7 +24,6 @@
 </head>
 <body class="pb-24">
 
-  <!-- Header / TopBar -->
   <header class="p-4 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex justify-between items-center sticky top-0 z-40">
     <div class="flex items-center gap-2">
       <div class="w-8 h-8 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center font-bold text-green-400 text-sm">vC</div>
@@ -33,25 +32,21 @@
     <div id="userInfo" class="text-xs text-slate-400">Sin sesión</div>
   </header>
 
-  <!-- Banner Promocional HD -->
   <div id="heroBanner" class="sport-banner-football h-36 p-4 flex flex-col justify-end border-b border-slate-800 transition-all duration-300">
     <span class="text-[10px] font-bold tracking-widest text-green-400 uppercase bg-green-950/80 border border-green-500/30 px-2 py-0.5 rounded w-max mb-1">Pozo Común Real-Time</span>
     <h2 id="bannerTitle" class="text-xl font-extrabold text-white drop-shadow-md">Cartelera de Fútbol</h2>
     <p class="text-xs text-slate-300">Apuesta saldo vCUP en pozo común (90% premios / 10% casa).</p>
   </div>
 
-  <!-- Main Container -->
   <main id="app" class="p-4 max-w-md mx-auto"></main>
 
-  <!-- Navegación Inferior (Tabs) -->
   <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 flex justify-around p-3 z-40">
     <button onclick="navigate('matches')" class="flex flex-col items-center text-xs font-semibold text-slate-400 hover:text-green-400"><span class="text-lg">🏆</span> Cartelera</button>
     <button onclick="navigate('wallet')" class="flex flex-col items-center text-xs font-semibold text-slate-400 hover:text-green-400"><span class="text-lg">💳</span> Billetera</button>
     <button onclick="navigate('bets')" class="flex flex-col items-center text-xs font-semibold text-slate-400 hover:text-green-400"><span class="text-lg">📜</span> Apuestas</button>
   </nav>
 
-  <!-- Botón Flotante WhatsApp Soporte -->
-  <a id="waButton" href="https://wa.me/5351576767?text=Hola,%20deseo%20solicitar%20recarga%20de%20vCUP" target="_blank" 
+  <a id="waButton" href="https://wa.me/5351576767?text=Hola,%20deseo%20solicitar%20recarga%20de%20vCUP" target="_blank"
      class="fixed bottom-20 right-4 bg-green-500 text-slate-950 p-3 rounded-full shadow-lg z-50 text-2xl font-bold hover:scale-105 transition-transform flex items-center justify-center w-12 h-12">💬</a>
 
   <script>
@@ -106,7 +101,7 @@
               saveUser(state.user);
               alert(`🎉 ¡Premio acreditado! Has ganado ${payout.toFixed(2)} vCUP en el pozo común.`);
 
-              const updatedBets = allBets.map(b => {
+              const updatedBets = allBets.map((b) => {
                 if (settleData.settledMatchIds && settleData.settledMatchIds.includes(b.matchId)) b.settled = true;
                 return b;
               });
@@ -210,12 +205,14 @@
         <div id="mList" class="space-y-4"></div>
       `;
       const list = document.getElementById('mList');
-      const filtered = state.matches.filter(m => m.sport === state.sport);
+      const filtered = state.matches.filter((m) => m.sport === state.sport);
+
       if (filtered.length === 0) {
-        list.innerHTML = `<p class="text-center text-xs text-slate-500 py-8">No hay partidos reales disponibles en este momento. Reintente en unos minutos.</p>`;
+        list.innerHTML = `<p class="text-center text-xs text-slate-500 py-8">No hay partidos reales en la próxima semana. Vuelve a revisar en unos minutos.</p>`;
         return;
       }
-      filtered.forEach(m => {
+
+      filtered.forEach((m) => {
         const locked = isLocked(m.date);
         list.innerHTML += `
           <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
@@ -265,13 +262,13 @@
     }
 
     function renderBets(container) {
-      const bets = JSON.parse(localStorage.getItem('vcup_user_bets') || '[]').filter(b => state.user && b.userEmail === state.user.email).slice(-10);
+      const bets = JSON.parse(localStorage.getItem('vcup_user_bets') || '[]').filter((b) => state.user && b.userEmail === state.user.email).slice(-10);
       container.innerHTML = `<h3 class="text-lg font-bold mb-4 text-green-400">Mis Últimas Apuestas (Máx. 10)</h3>`;
       if (bets.length === 0) {
         container.innerHTML += `<p class="text-center text-xs text-slate-500 py-6">No tienes apuestas registradas.</p>`;
         return;
       }
-      bets.reverse().forEach(b => {
+      bets.reverse().forEach((b) => {
         container.innerHTML += `
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 mb-3 text-xs">
             <div class="flex justify-between text-slate-400 mb-1"><span>Partido: ${b.matchId}</span><span class="${b.settled ? 'text-green-400 font-bold' : 'text-yellow-400'}">${b.settled ? 'Finalizado' : 'Pendiente'}</span></div>
