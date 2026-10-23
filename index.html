@@ -64,42 +64,6 @@
 
     const ADMIN_KEY = "MASTER123";
 
-    const defaultMatches = [
-      {
-        id: "fb_demo1",
-        sport: "FOOTBALL",
-        league: "LaLiga España",
-        homeTeam: "Real Madrid",
-        homeLogo: "https://crests.football-data.org/86.png",
-        awayTeam: "FC Barcelona",
-        awayLogo: "https://crests.football-data.org/81.png",
-        date: new Date(Date.now() + 180 * 60000).toISOString(),
-        totalPool: 250.00
-      },
-      {
-        id: "fb_demo2",
-        sport: "FOOTBALL",
-        league: "Premier League",
-        homeTeam: "Manchester City",
-        homeLogo: "https://crests.football-data.org/65.png",
-        awayTeam: "Arsenal FC",
-        awayLogo: "https://crests.football-data.org/57.png",
-        date: new Date(Date.now() + 45 * 60000).toISOString(),
-        totalPool: 180.00
-      },
-      {
-        id: "bb_1",
-        sport: "BASEBALL",
-        league: "MLB Béisbol",
-        homeTeam: "NY Yankees",
-        homeLogo: "https://www.mlbstatic.com/team-logos/147.svg",
-        awayTeam: "Boston Red Sox",
-        awayLogo: "https://www.mlbstatic.com/team-logos/111.svg",
-        date: new Date(Date.now() + 240 * 60000).toISOString(),
-        totalPool: 320.00
-      }
-    ];
-
     function saveUser(user) {
       state.user = user;
       localStorage.setItem('vcup_user', JSON.stringify(user));
@@ -113,7 +77,7 @@
 
     function isLocked(dateStr) {
       const matchTime = new Date(dateStr).getTime();
-      return (matchTime - Date.now()) <= (60 * 1000 * 60); // Cierre 60 min antes
+      return (matchTime - Date.now()) <= (60 * 1000 * 60);
     }
 
     async function fetchMatchesAndSettle() {
@@ -121,12 +85,11 @@
         const res = await fetch('/api/matches');
         if (res.ok) {
           const data = await res.json();
-          state.matches = (Array.isArray(data) && data.length > 0) ? data : defaultMatches;
+          state.matches = Array.isArray(data) ? data.filter(Boolean) : [];
         } else {
-          state.matches = defaultMatches;
+          state.matches = [];
         }
 
-        // Revisar premios pendientes
         const allBets = JSON.parse(localStorage.getItem('vcup_user_bets') || '[]');
         if (allBets.length > 0 && state.user) {
           const settleRes = await fetch('/api/settle', {
@@ -134,22 +97,25 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userBets: allBets })
           });
-          const settleData = await settleRes.json();
-          if (settleData.success && settleData.balanceUpdates && settleData.balanceUpdates[state.user.email]) {
-            const payout = settleData.balanceUpdates[state.user.email];
-            state.user.balance += payout;
-            saveUser(state.user);
-            alert(`🎉 ¡Premio acreditado! Has ganado ${payout.toFixed(2)} vCUP en el pozo común.`);
-            
-            const updatedBets = allBets.map(b => {
-              if (settleData.settledMatchIds && settleData.settledMatchIds.includes(b.matchId)) b.settled = true;
-              return b;
-            });
-            localStorage.setItem('vcup_user_bets', JSON.stringify(updatedBets.slice(-10)));
+
+          if (settleRes.ok) {
+            const settleData = await settleRes.json();
+            if (settleData.success && settleData.balanceUpdates && settleData.balanceUpdates[state.user.email]) {
+              const payout = settleData.balanceUpdates[state.user.email];
+              state.user.balance += payout;
+              saveUser(state.user);
+              alert(`🎉 ¡Premio acreditado! Has ganado ${payout.toFixed(2)} vCUP en el pozo común.`);
+
+              const updatedBets = allBets.map(b => {
+                if (settleData.settledMatchIds && settleData.settledMatchIds.includes(b.matchId)) b.settled = true;
+                return b;
+              });
+              localStorage.setItem('vcup_user_bets', JSON.stringify(updatedBets.slice(-10)));
+            }
           }
         }
       } catch (e) {
-        state.matches = defaultMatches;
+        state.matches = [];
       }
       render();
     }
@@ -238,15 +204,15 @@
     function renderMatches(container) {
       container.innerHTML = `
         <div class="flex gap-2 mb-4">
-          <button onclick="setSport('FOOTBALL')" class="flex-1 p-2.5 rounded-xl font-bold text-xs ${state.sport === 'FOOTBALL' ? 'bg-green-500 text-slate-950' : 'bg-slate-900 text-slate-400 border border-slate-800'}">⚽ Fútbol</button>
-          <button onclick="setSport('BASEBALL')" class="flex-1 p-2.5 rounded-xl font-bold text-xs ${state.sport === 'BASEBALL' ? 'bg-green-500 text-slate-950' : 'bg-slate-900 text-slate-400 border border-slate-800'}">⚾ Béisbol MLB</button>
+          <button onclick="setSport('FOOTBALL')" class="flex-1 p-2.5 rounded-xl font-bold text-xs ${state.sport === 'FOOTBALL' ? 'bg-green-500 text-slate-950' : 'bg-slate-900 text-slate-400 border border-slate-800'}">Fútbol</button>
+          <button onclick="setSport('BASEBALL')" class="flex-1 p-2.5 rounded-xl font-bold text-xs ${state.sport === 'BASEBALL' ? 'bg-green-500 text-slate-950' : 'bg-slate-900 text-slate-400 border border-slate-800'}">Béisbol</button>
         </div>
         <div id="mList" class="space-y-4"></div>
       `;
       const list = document.getElementById('mList');
       const filtered = state.matches.filter(m => m.sport === state.sport);
       if (filtered.length === 0) {
-        list.innerHTML = `<p class="text-center text-xs text-slate-500 py-8">No hay partidos disponibles.</p>`;
+        list.innerHTML = `<p class="text-center text-xs text-slate-500 py-8">No hay partidos reales disponibles en este momento. Reintente en unos minutos.</p>`;
         return;
       }
       filtered.forEach(m => {
@@ -255,7 +221,7 @@
           <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
             <div class="bg-slate-950 px-4 py-2 flex justify-between text-[11px] text-slate-400 border-b border-slate-800">
               <span class="text-green-400 font-semibold">${m.league}</span>
-              <span>🕒 ${new Date(m.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              <span>🕒 ${new Date(m.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
             </div>
             <div class="p-4">
               <div class="flex justify-between items-center mb-4">
@@ -263,7 +229,7 @@
                 <div class="text-xs font-black text-slate-500">VS</div>
                 <div class="flex flex-col items-center w-1/3 text-center"><img src="${m.awayLogo}" class="w-10 h-10 object-contain mb-1"><span class="text-xs font-bold text-white">${m.awayTeam}</span></div>
               </div>
-              <div class="bg-slate-950 p-2 rounded-xl text-center mb-3 border border-slate-800"><span class="text-[10px] text-slate-400 block uppercase">Pozo Común</span><span class="text-sm font-extrabold text-green-400">${m.totalPool} vCUP</span></div>
+              <div class="bg-slate-950 p-2 rounded-xl text-center mb-3 border border-slate-800"><span class="text-[10px] text-slate-400 block uppercase">Pozo Común</span><span class="text-sm font-black text-green-400">${Number(m.totalPool || 0).toFixed(2)} vCUP</span></div>
               ${locked ? `<button disabled class="w-full bg-slate-800/60 text-slate-500 p-2.5 rounded-xl text-xs font-bold">🔒 Apuestas Cerradas (60 min antes)</button>` : `
                 <div class="grid grid-cols-${m.sport === 'FOOTBALL' ? '3' : '2'} gap-2">
                   <button onclick="placeBet('${m.id}', 'HOME')" class="bg-slate-800 hover:bg-slate-700 text-green-400 p-2.5 rounded-xl text-xs font-bold">1 (Local)</button>
@@ -292,7 +258,7 @@
 
       let bets = JSON.parse(localStorage.getItem('vcup_user_bets') || '[]');
       bets.push({ userEmail: state.user.email, matchId, choice, amount, settled: false, date: new Date().toISOString() });
-      localStorage.setItem('vcup_user_bets', JSON.stringify(bets.slice(-10))); // Máximo 10 en historial
+      localStorage.setItem('vcup_user_bets', JSON.stringify(bets.slice(-10)));
 
       alert("¡Apuesta registrada con éxito en el pozo común!");
       render();
@@ -308,7 +274,7 @@
       bets.reverse().forEach(b => {
         container.innerHTML += `
           <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 mb-3 text-xs">
-            <div class="flex justify-between text-slate-400 mb-1"><span>Partido: ${b.matchId}</span><span class="${b.settled ? 'text-green-400 font-bold' : 'text-yellow-400'}">${b.settled ? 'Finalizada / Liquidada' : 'En Curso'}</span></div>
+            <div class="flex justify-between text-slate-400 mb-1"><span>Partido: ${b.matchId}</span><span class="${b.settled ? 'text-green-400 font-bold' : 'text-yellow-400'}">${b.settled ? 'Finalizado' : 'Pendiente'}</span></div>
             <div class="font-bold text-white">Opción elegida: ${b.choice} | Monto: ${b.amount} vCUP</div>
           </div>`;
       });
@@ -318,7 +284,7 @@
       container.innerHTML = `
         <div class="bg-slate-900 p-6 rounded-2xl border border-red-500/30">
           <h2 class="text-xl font-bold text-red-400 mb-4">🔐 Admin Portal</h2>
-          <div id="adminLock"><input id="masterKey" type="password" placeholder="Llave Maestra" class="w-full p-3 mb-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white"><button onclick="unlockAdmin()" class="w-full bg-red-600 font-bold p-3 rounded-xl text-white">Desbloquear</button></div>
+          <div id="adminLock"><input id="masterKey" type="password" placeholder="Llave Maestra" class="w-full p-3 mb-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white"><button onclick="unlockAdmin()" class="w-full bg-red-500 font-bold p-3 rounded-xl text-white text-sm">Desbloquear</button></div>
           <div id="adminContent" class="hidden">
             <input id="admEmail" type="email" placeholder="Correo usuario" class="w-full p-2.5 mb-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white">
             <input id="admAmount" type="number" placeholder="Monto vCUP (+ o -)" class="w-full p-2.5 mb-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white">
