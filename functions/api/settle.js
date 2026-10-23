@@ -1,5 +1,5 @@
 function normalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || '').trim().toLowerCase();
 }
 
 function asNumber(value, fallback = 0) {
@@ -8,9 +8,9 @@ function asNumber(value, fallback = 0) {
 }
 
 function mapWinnerToChoice(winner) {
-  if (winner === "HOME_TEAM") return "HOME";
-  if (winner === "AWAY_TEAM") return "AWAY";
-  return "DRAW";
+  if (winner === 'HOME_TEAM') return 'HOME';
+  if (winner === 'AWAY_TEAM') return 'AWAY';
+  return 'DRAW';
 }
 
 export async function onRequestPost(context) {
@@ -26,8 +26,8 @@ export async function onRequestPost(context) {
       betsToSettle = userBets;
     } else {
       const where = targetEmail
-        ? "WHERE user_email = ? AND settled = 0"
-        : "WHERE settled = 0";
+        ? 'WHERE user_email = ? AND settled = 0'
+        : 'WHERE settled = 0';
 
       const params = targetEmail ? [targetEmail] : [];
       const res = await env.DB.prepare(
@@ -43,22 +43,22 @@ export async function onRequestPost(context) {
         settledMatchIds: [],
         balanceUpdates: {}
       }), {
-        headers: { "Content-Type": "application/json" }
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const footballRes = await fetch("https://api.football-data.org/v4/competitions/PD/matches?status=FINISHED&limit=50", {
-      headers: { "X-Auth-Token": "26649c1bb8fa4c11ba8a5c6ea393df58" }
+    const footballRes = await fetch('https://api.football-data.org/v4/competitions/PD/matches?status=FINISHED&limit=50', {
+      headers: { 'X-Auth-Token': '26649c1bb8fa4c11ba8a5c6ea393df58' }
     });
 
     if (!footballRes.ok) {
       return new Response(JSON.stringify({
         success: false,
-        message: "Error consultando resultados",
+        message: 'Error consultando resultados',
         code: footballRes.status
       }), {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -67,7 +67,7 @@ export async function onRequestPost(context) {
 
     for (const match of footballData.matches || []) {
       const matchId = `fb_${match.id}`;
-      const winner = match?.score?.winner || "DRAW";
+      const winner = match?.score?.winner || 'DRAW';
       const choice = mapWinnerToChoice(winner);
       finalResults.set(matchId, choice);
     }
@@ -78,7 +78,7 @@ export async function onRequestPost(context) {
 
     for (const bet of betsToSettle) {
       if (!bet || bet.settled === 1) continue;
-      const matchId = String(bet.match_id || "");
+      const matchId = String(bet.match_id || '');
       if (!matchId) continue;
 
       if (!groupedByMatch.has(matchId)) {
@@ -93,7 +93,7 @@ export async function onRequestPost(context) {
       if (!result) continue;
 
       const totalPool = betsForMatch.reduce((sum, bet) => sum + asNumber(bet.amount), 0);
-      const winners = betsForMatch.filter((bet) => String(bet.choice || "").toUpperCase() === result.toUpperCase());
+      const winners = betsForMatch.filter((bet) => String(bet.choice || '').toUpperCase() === result.toUpperCase());
       const totalWinningAmount = winners.reduce((sum, bet) => sum + asNumber(bet.amount), 0);
 
       if (totalWinningAmount > 0) {
@@ -107,11 +107,11 @@ export async function onRequestPost(context) {
           balanceUpdates[userEmail] = (balanceUpdates[userEmail] || 0) + payout;
 
           await env.DB.prepare(
-            "UPDATE users SET balance = balance + ? WHERE email = ?"
+            'UPDATE users SET balance = balance + ? WHERE email = ?'
           ).bind(payout, userEmail).run();
 
           await env.DB.prepare(
-            "UPDATE bets SET settled = 1, payout = ? WHERE id = ?"
+            'UPDATE bets SET settled = 1, payout = ? WHERE id = ?'
           ).bind(payout, winner.id).run();
 
           settledMatchIds.push(matchId);
@@ -124,11 +124,11 @@ export async function onRequestPost(context) {
           balanceUpdates[userEmail] = (balanceUpdates[userEmail] || 0) + refund;
 
           await env.DB.prepare(
-            "UPDATE users SET balance = balance + ? WHERE email = ?"
+            'UPDATE users SET balance = balance + ? WHERE email = ?'
           ).bind(refund, userEmail).run();
 
           await env.DB.prepare(
-            "UPDATE bets SET settled = 1, payout = ? WHERE id = ?"
+            'UPDATE bets SET settled = 1, payout = ? WHERE id = ?'
           ).bind(refund, bet.id).run();
 
           settledMatchIds.push(matchId);
@@ -141,12 +141,12 @@ export async function onRequestPost(context) {
       settledMatchIds: [...new Set(settledMatchIds)],
       balanceUpdates
     }), {
-      headers: { "Content-Type": "application/json" }
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message || "Error en la liquidación" }), {
+    return new Response(JSON.stringify({ error: err.message || 'Error en la liquidación' }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
